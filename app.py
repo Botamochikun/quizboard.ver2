@@ -1,84 +1,80 @@
 import os
-import base64
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
 app = Flask(__name__)
 app.secret_key = "your-secret-key"
 
-answers = []
+answers = []  # [(name, image_base64 or None, text_answer or None, score)]
 confirmed_scores = {}
 
 @app.route('/')
 def index():
     return redirect('/player')
 
-@app.route("/player", methods=["GET", "POST"])
+@app.route('/player', methods=['GET', 'POST'])
 def player():
-    if request.method == "POST":
-        name = request.form.get("name")
+    if request.method == 'POST':
+        name = request.form.get('name')
         if not name:
-            return render_template("player.html", error="名前を入力してください")
-        session["player_name"] = name
-        return redirect(url_for("player_quiz"))
-    if "player_name" in session:
-        return redirect(url_for("player_quiz"))
-    return render_template("player.html")
+            return render_template('player.html', error='名前を入力してください')
+        session['username'] = name
+        return redirect(url_for('quiz'))
+    if 'username' in session:
+        return redirect(url_for('quiz'))
+    return render_template('player.html')
 
-@app.route("/player/quiz", methods=["GET", "POST"])
-def player_quiz():
-    if "player_name" not in session:
-        return redirect(url_for("player"))
+@app.route('/quiz', methods=['GET', 'POST'])
+def quiz():
+    if 'username' not in session:
+        return redirect(url_for('player'))
 
-    return render_template("quiz.html", player_name=session["player_name"])
+    if request.method == 'POST':
+        # キャンバスからのBase64画像か、テキスト回答を受け取る
+        image_data = request.form.get('image_data')
+        text_answer = request.form.get('text_answer')
 
-@app.route("/submit", methods=["POST"])
-def submit():
-    name = request.form['name']
-    image_data = request.form['image']
+        name = session['username']
 
-    # image_data が "data:image/png;base64,..." の形式で送られてくるので、ヘッダを削除して保存
-    header, encoded = image_data.split(",", 1)
-    image_binary = base64.b64decode(encoded)
-    filename = f"uploads/{name}.png"
-    with open(filename, "wb") as f:
-        f.write(image_binary)
+        # 既に同じ名前の回答があれば上書き、なければ追加。scoreは維持
+        found = False
+        for i, (n, img, txt, sc) in enumerate(answers):
+            if n == name:
+                answers[i] = (n, image_data, text_answer, sc)
+                found = True
+                break
+        if not found:
+            answers.append((name, image_data, text_answer, 0))
 
-    # 回答記録
-    found = False
-    for i, (n, img, sc) in enumerate(answers):
-        if n == name:
-            answers[i] = (n, image_data, sc)
-            found = True
-            break
-    if not found:
-        answers.append((name, image_data, 0))
-    return jsonify({"success": True})
+        return redirect(url_for('quiz'))
 
-@app.route("/host")
+    return render_template('quiz.html', username=session['username'])
+
+@app.route('/host')
 def host():
-    return render_template("host.html", answers=answers)
+    return render_template('host.html', answers=answers)
 
-@app.route("/score", methods=["POST"])
+@app.route('/score', methods=['POST'])
 def score():
     name = request.form['name']
     score = int(request.form['score'])
-    for i, (n, img, sc) in enumerate(answers):
+    for i, (n, img, txt, sc) in enumerate(answers):
         if n == name:
-            answers[i] = (n, img, score)
+            answers[i] = (n, img, txt, score)
             break
     return '', 204
 
-@app.route("/reset")
+@app.route('/reset')
 def reset():
     global confirmed_scores
-    confirmed_scores = {name: score for name, _, score in answers}
+    confirmed_scores = {name: score for name, _, _, score in answers}
     answers.clear()
+    session.clear()
     return redirect('/host')
 
-@app.route("/scores")
+@app.route('/scores')
 def scores():
     return jsonify(confirmed_scores)
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
