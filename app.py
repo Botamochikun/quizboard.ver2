@@ -68,8 +68,9 @@ def reset():
     global confirmed_scores
     confirmed_scores = {name: score for name, _, _, score in answers}
     answers.clear()
-    session.clear()
+    # session.clear() を削除、名前は消さない（リセットしても名前は保持）
     return redirect('/host')
+
 
 @app.route('/scores')
 def scores():

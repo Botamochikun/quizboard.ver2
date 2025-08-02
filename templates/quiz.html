@@ -59,5 +59,32 @@
       return true;
     }
   </script>
+
+  <!-- quiz.htmlの bodyのどこかにスコア表示領域を追加 -->
+<p>確定スコア: <span id="confirmed-score">0</span></p>
+
+<script>
+  // 既存のprepareSubmitなどの下あたりに追加
+
+  async function fetchConfirmedScore() {
+    try {
+      const res = await fetch('/scores');
+      if (!res.ok) throw new Error('スコア取得に失敗');
+      const data = await res.json();
+      // data は {name: score, ...}
+      const username = "{{ username }}";
+      const score = data[username] ?? 0;
+      document.getElementById('confirmed-score').textContent = score;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // 5秒ごとにスコアを取得・更新
+  setInterval(fetchConfirmedScore, 5000);
+  // ページ読み込み時にも一度取得
+  fetchConfirmedScore();
+</script>
+
 </body>
 </html>
