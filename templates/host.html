@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+<head>
+  <title>ホスト画面</title>
+  <script>
+    function updateScore(name) {
+      const score = prompt(name + " の点数を入力してください:");
+      if (score !== null) {
+        fetch('/score', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `name=${encodeURIComponent(name)}&score=${encodeURIComponent(score)}`
+        }).then(() => location.reload());
+      }
+    }
+  </script>
+</head>
+<body>
+  <h2>ホスト用画面</h2>
+  <form action="/reset">
+    <button type="submit">リセットして確定</button>
+  </form>
+  <ul>
+    {% for name, image, score in answers %}
+      <li>
+        <p>{{ name }}（現在の点数: {{ score }}）</p>
+        <img src="data:image/png;base64,{{ image }}" width="200"><br>
+        <button onclick="updateScore('{{ name }}')">点数をつける</button>
+      </li>
+    {% endfor %}
+  </ul>
+</body>
+</html>
