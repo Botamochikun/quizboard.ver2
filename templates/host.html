@@ -1,33 +1,41 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
   <title>ホスト画面</title>
-  <script>
-    function updateScore(name) {
-      const score = prompt(name + " の点数を入力してください:");
-      if (score !== null) {
-        fetch('/score', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: `name=${encodeURIComponent(name)}&score=${encodeURIComponent(score)}`
-        }).then(() => location.reload());
-      }
-    }
-  </script>
 </head>
 <body>
-  <h2>ホスト用画面</h2>
-  <form action="/reset">
-    <button type="submit">リセットして確定</button>
-  </form>
-  <ul>
-    {% for name, image, score in answers %}
-      <li>
-        <p>{{ name }}（現在の点数: {{ score }}）</p>
-        <img src="data:image/png;base64,{{ image }}" width="200"><br>
-        <button onclick="updateScore('{{ name }}')">点数をつける</button>
-      </li>
-    {% endfor %}
-  </ul>
+  <h1>提出された回答とスコア管理</h1>
+
+  {% if answers|length == 0 %}
+    <p>まだ提出はありません</p>
+  {% endif %}
+
+ {% for name, image_data, text_answer, score in answers %}
+  <div>
+    <p>{{ name }}</p>
+    {% if image_data %}
+      <img src="{{ image_data }}" alt="手書き回答画像" style="max-width:300px;">
+    {% endif %}
+    {% if text_answer %}
+      <p>テキスト回答: {{ text_answer }}</p>
+    {% endif %}
+    <form method="POST" action="/score">
+      <input type="hidden" name="name" value="{{ name }}">
+      スコア: <input type="number" name="score" value="{{ score }}" min="0" required>
+      <button type="submit">更新</button>
+    </form>
+  </div>
+{% endfor %}
+
+
+    <form method="POST" action="/score" style="margin-top: 10px;">
+      <input type="hidden" name="name" value="{{ name }}">
+      スコア: <input type="number" name="score" value="{{ score }}" min="0" required>
+      <button type="submit">更新</button>
+    </form>
+  </div>
+  {% endfor %}
+
+  <a href="/reset">リセット（スコア確定）</a>
 </body>
 </html>
