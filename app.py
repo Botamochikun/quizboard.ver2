@@ -1,18 +1,17 @@
 import os
+import base64
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 
 app = Flask(__name__)
-app.secret_key = "your-secret-key"  # セッションを使うには必要
+app.secret_key = "your-secret-key"
 
-# [(name, image_base64, score)]
 answers = []
-confirmed_scores = {}  # リセット時に確定する点数を保存
+confirmed_scores = {}
 
 @app.route('/')
 def index():
     return redirect('/player')
 
-# セッションで保持する回答者名
 @app.route("/player", methods=["GET", "POST"])
 def player():
     if request.method == "POST":
@@ -30,35 +29,36 @@ def player_quiz():
     if "player_name" not in session:
         return redirect(url_for("player"))
 
-    if request.method == "POST":
-        image = request.files["image"]
-        # プレイヤー名を取得して画像処理に使う
-        name = session["player_name"]
-        image.save(f"uploads/{name}.png")
-        return redirect(url_for("player_quiz"))  # 名前入力に戻らず、クイズページに留まる
-
     return render_template("quiz.html", player_name=session["player_name"])
 
-@app.route('/host')
-def host():
-    return render_template('host.html', answers=answers)
-
-@app.route('/submit', methods=['POST'])
+@app.route("/submit", methods=["POST"])
 def submit():
     name = request.form['name']
-    image = request.form['image']
-    # 新規はscore=0で登録。すでに名前があれば上書きしない簡易版
+    image_data = request.form['image']
+
+    # image_data が "data:image/png;base64,..." の形式で送られてくるので、ヘッダを削除して保存
+    header, encoded = image_data.split(",", 1)
+    image_binary = base64.b64decode(encoded)
+    filename = f"uploads/{name}.png"
+    with open(filename, "wb") as f:
+        f.write(image_binary)
+
+    # 回答記録
     found = False
     for i, (n, img, sc) in enumerate(answers):
         if n == name:
-            answers[i] = (n, image, sc)  # 画像だけ上書き（score維持）
+            answers[i] = (n, image_data, sc)
             found = True
             break
     if not found:
-        answers.append((name, image, 0))
-    return redirect('/player')
+        answers.append((name, image_data, 0))
+    return jsonify({"success": True})
 
-@app.route('/score', methods=['POST'])
+@app.route("/host")
+def host():
+    return render_template("host.html", answers=answers)
+
+@app.route("/score", methods=["POST"])
 def score():
     name = request.form['name']
     score = int(request.form['score'])
@@ -68,17 +68,17 @@ def score():
             break
     return '', 204
 
-@app.route('/reset')
+@app.route("/reset")
 def reset():
     global confirmed_scores
     confirmed_scores = {name: score for name, _, score in answers}
     answers.clear()
     return redirect('/host')
 
-@app.route('/scores')
+@app.route("/scores")
 def scores():
     return jsonify(confirmed_scores)
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
