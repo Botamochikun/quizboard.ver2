@@ -10,7 +10,7 @@
   </style>
 </head>
 <body>
-  <h1>{{ username }} さん、回答を入力してください</h1>
+  <h1>{{ name }} さん、回答を入力してください</h1>
 
   <form method="POST" action="/quiz" onsubmit="return prepareSubmit()">
     <label>手書き回答（キャンバス）:</label><br>
@@ -25,6 +25,8 @@
     <button type="submit">送信</button>
   </form>
 
+  <p>確定スコア: <span id="confirmed-score">0</span></p>
+
   <script>
     const canvas = document.getElementById('board');
     const ctx = canvas.getContext('2d');
@@ -34,8 +36,6 @@
     canvas.addEventListener('mouseup', e => { drawing = false; });
     canvas.addEventListener('mouseout', e => { drawing = false; });
     canvas.addEventListener('mousemove', draw);
-
-    // スマホ対応タッチイベントも入れるなら追加してください
 
     function draw(e) {
       if (!drawing) return;
@@ -53,38 +53,26 @@
     }
 
     function prepareSubmit() {
-      // 送信前にcanvasをBase64文字列化してhiddenにセット
       const dataURL = canvas.toDataURL();
       document.getElementById('image_data').value = dataURL;
       return true;
     }
-  </script>
 
-  <!-- quiz.htmlの bodyのどこかにスコア表示領域を追加 -->
-<p>確定スコア: <span id="confirmed-score">0</span></p>
-
-<script>
-  // 既存のprepareSubmitなどの下あたりに追加
-
-  async function fetchConfirmedScore() {
-    try {
-      const res = await fetch('/scores');
-      if (!res.ok) throw new Error('スコア取得に失敗');
-      const data = await res.json();
-      // data は {name: score, ...}
-      const username = "{{ username }}";
-      const score = data[username] ?? 0;
-      document.getElementById('confirmed-score').textContent = score;
-    } catch (e) {
-      console.error(e);
+    async function fetchConfirmedScore() {
+      try {
+        const res = await fetch('/scores');
+        if (!res.ok) throw new Error('スコア取得に失敗');
+        const data = await res.json();
+        const username = "{{ name }}";
+        const score = data[username]?.score ?? 0;
+        document.getElementById('confirmed-score').textContent = score;
+      } catch (e) {
+        console.error(e);
+      }
     }
-  }
 
-  // 5秒ごとにスコアを取得・更新
-  setInterval(fetchConfirmedScore, 5000);
-  // ページ読み込み時にも一度取得
-  fetchConfirmedScore();
-</script>
-
+    setInterval(fetchConfirmedScore, 5000);
+    fetchConfirmedScore();
+  </script>
 </body>
 </html>

@@ -1,81 +1,64 @@
-import os
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask_cors import CORS
+import os
 
 app = Flask(__name__)
-app.secret_key = "your-secret-key"
+app.secret_key = os.urandom(24)
+CORS(app)
 
-answers = []  # [(name, image_base64 or None, text_answer or None, score)]
-confirmed_scores = {}
+answers = {}
 
 @app.route('/')
 def index():
-    return redirect('/player')
-
-@app.route('/player', methods=['GET', 'POST'])
-def player():
-    if request.method == 'POST':
-        name = request.form.get('name')
-        if not name:
-            return render_template('player.html', error='名前を入力してください')
-        session['username'] = name
-        return redirect(url_for('quiz'))
-    if 'username' in session:
-        return redirect(url_for('quiz'))
-    return render_template('player.html')
+    return render_template('index.html')
 
 @app.route('/quiz', methods=['GET', 'POST'])
 def quiz():
-    if 'username' not in session:
-        return redirect(url_for('player'))
-
     if request.method == 'POST':
-        # キャンバスからのBase64画像か、テキスト回答を受け取る
-        image_data = request.form.get('image_data')
-        text_answer = request.form.get('text_answer')
-
-        name = session['username']
-
-        # 既に同じ名前の回答があれば上書き、なければ追加。scoreは維持
-        found = False
-        for i, (n, img, txt, sc) in enumerate(answers):
-            if n == name:
-                answers[i] = (n, image_data, text_answer, sc)
-                found = True
-                break
-        if not found:
-            answers.append((name, image_data, text_answer, 0))
-
+        session['name'] = request.form['name']
+        answers[session['name']] = {"image": None, "score": 0}
         return redirect(url_for('quiz'))
+    if 'name' not in session:
+        return redirect(url_for('index'))
+    return render_template('quiz.html', name=session['name'])
 
-    return render_template('quiz.html', username=session['username'])
-
-@app.route('/host')
-def host():
-    return render_template('host.html', answers=answers)
+@app.route('/submit', methods=['POST'])
+def submit():
+    name = session.get('name')
+    if not name:
+        return 'No name in session', 400
+    image_data = request.json.get('image')
+    answers[name]['image'] = image_data
+    return 'Image received', 200
 
 @app.route('/score', methods=['POST'])
 def score():
-    name = request.form['name']
-    score = int(request.form['score'])
-    for i, (n, img, txt, sc) in enumerate(answers):
-        if n == name:
-            answers[i] = (n, img, txt, score)
-            break
-    return '', 204
+    name = session.get('name')
+    if not name:
+        return 'No name in session', 400
+    point = request.json.get('point', 0)
+    answers[name]['score'] += point
+    return 'Score updated', 200
 
-@app.route('/reset')
-def reset():
-    global confirmed_scores
-    confirmed_scores = {name: score for name, _, _, score in answers}
-    answers.clear()
-    # session.clear() を削除、名前は消さない（リセットしても名前は保持）
-    return redirect('/host')
-
-
-@app.route('/scores')
+@app.route('/scores', methods=['GET'])
 def scores():
-    return jsonify(confirmed_scores)
+    return jsonify(answers)
+
+@app.route('/host')
+def host():
+    sorted_answers = sorted(
+        [(name, data["image"], data["score"]) for name, data in answers.items()],
+        key=lambda x: x[2],
+        reverse=True
+    )
+    return render_template('host.html', answers=sorted_answers)
+
+@app.route('/reset', methods=['POST'])
+def reset():
+    for data in answers.values():
+        data["image"] = None
+        data["score"] = 0
+    return 'Reset done', 200
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(debug=True)
