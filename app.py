@@ -10,7 +10,7 @@ answers = {}
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return redirect('/quiz')  # ← または /host にリダイレクトするように変更
 
 @app.route('/quiz', methods=['GET', 'POST'])
 def quiz():
@@ -61,4 +61,4 @@ def reset():
     return 'Reset done', 200
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
