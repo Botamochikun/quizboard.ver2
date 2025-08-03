@@ -1,26 +1,31 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
-from flask_cors import CORS
+from flask import Flask, render_template, request, redirect, url_for, session
 import os
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
-CORS(app)
-
-answers = {}
 
 @app.route('/')
 def index():
-    return redirect('/quiz')  # ← または /host にリダイレクトするように変更
+    return redirect(url_for('player'))
+
+@app.route('/player', methods=['GET', 'POST'])
+def player():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        if not name:
+            return render_template('player.html', error='名前を入力してください')
+        session['name'] = name
+        return redirect(url_for('quiz'))
+    return render_template('player.html')
 
 @app.route('/quiz', methods=['GET', 'POST'])
 def quiz():
-    if request.method == 'POST':
-        session['name'] = request.form['name']
-        answers[session['name']] = {"image": None, "score": 0}
-        return redirect(url_for('quiz'))
     if 'name' not in session:
-        return redirect(url_for('index'))
-    return render_template('quiz.html', name=session['name'])
+        return redirect(url_for('player'))
+    if request.method == 'POST':
+        # 回答処理など
+        pass
+    return render_template('quiz.html', username=session['name'])
 
 @app.route('/submit', methods=['POST'])
 def submit():
