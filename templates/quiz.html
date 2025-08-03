@@ -1,53 +1,70 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-  <title>クイズ回答</title>
+    <meta charset="UTF-8">
+    <title>クイズ画面</title>
+    <style>
+        #board {
+            border: 2px solid black;
+        }
+    </style>
 </head>
 <body>
-  <h2>{{ name }}さん、回答を入力してください</h2>
+    <h2>{{ name }}さんの回答</h2>
 
-  <form method="POST" action="/quiz" onsubmit="return prepareSubmit()">
-    <label>手書き回答（キャンバス）:</label><br>
-    <canvas id="board" width="400" height="300"></canvas><br>
-    <button type="button" onclick="clearCanvas()">クリア</button><br><br>
+    <form method="POST" action="/quiz" onsubmit="return prepareSubmit()">
+        <label>手書き回答（キャンバス）:</label><br>
+        <canvas id="board" width="400" height="300"></canvas><br>
+        <button type="button" onclick="clearCanvas()">クリア</button><br><br>
 
-    <input type="hidden" name="image_data" id="image_data">
+        <input type="hidden" name="image_data" id="image_data">
 
-    <label>テキスト回答（任意）:</label><br>
-    <textarea name="text_answer" rows="4" cols="50" placeholder="テキスト回答を入力できます"></textarea><br><br>
+        <label>テキスト回答（任意）:</label><br>
+        <textarea name="text_answer" rows="4" cols="50" placeholder="テキスト回答を入力できます"></textarea><br><br>
 
-    <button type="submit">送信</button>
-  </form>
+        <button type="submit">送信</button>
+    </form>
 
-  <script>
-    const canvas = document.getElementById('board');
-    const ctx = canvas.getContext('2d');
-    let drawing = false;
+    <p>現在のスコア: <strong>{{ score }}</strong></p>
 
-    canvas.addEventListener('mousedown', e => { drawing = true; ctx.beginPath(); draw(e); });
-    canvas.addEventListener('mouseup', e => { drawing = false; });
-    canvas.addEventListener('mouseout', e => { drawing = false; });
-    canvas.addEventListener('mousemove', draw);
+    <script>
+        const canvas = document.getElementById('board');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
 
-    function draw(e) {
-      if (!drawing) return;
-      const rect = canvas.getBoundingClientRect();
-      ctx.lineWidth = 3;
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = 'black';
-      ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-      ctx.stroke();
-    }
+        canvas.addEventListener('mousedown', e => {
+            drawing = true;
+            ctx.beginPath();
+            draw(e);
+        });
 
-    function clearCanvas() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
+        canvas.addEventListener('mouseup', () => drawing = false);
+        canvas.addEventListener('mouseout', () => drawing = false);
+        canvas.addEventListener('mousemove', draw);
 
-    function prepareSubmit() {
-      const dataURL = canvas.toDataURL();
-      document.getElementById('image_data').value = dataURL;
-      return true;
-    }
-  </script>
+        function draw(e) {
+            if (!drawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#000';
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function prepareSubmit() {
+            const imageData = canvas.toDataURL();
+            document.getElementById('image_data').value = imageData;
+            return true;
+        }
+    </script>
 </body>
 </html>

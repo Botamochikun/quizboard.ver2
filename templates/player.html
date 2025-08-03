@@ -1,13 +1,20 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
-    <title>プレイヤー登録</title>
+  <title>名前入力</title>
 </head>
 <body>
-    <h1>名前を入力してください</h1>
-    <form method="post">
-        <input type="text" name="name" required>
-        <button type="submit">開始</button>
-    </form>
+  <h1>名前を入力してください</h1>
+  {% if error %}
+    <p style="color:red;">{{ error }}</p>
+  {% endif %}
+  <form method="POST" action="/player">
+    <input type="text" name="name" placeholder="名前" required>
+    <button type="submit">送信</button>
+  </form>
+
+  {% if score is not none %}
+    <p>前回スコア: {{ score }}</p>
+  {% endif %}
 </body>
 </html>

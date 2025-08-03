@@ -1,26 +1,33 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
-    <title>ホスト画面</title>
+  <title>ホスト画面</title>
 </head>
 <body>
-    <h1>参加者の回答一覧</h1>
-    <form action="/reset">
-        <button type="submit">リセット</button>
-    </form>
-    {% for name, data in answers.items() %}
-        <div style="margin-bottom:30px;">
-            <h2>{{ name }}</h2>
-            {% if data.image %}
-                <img src="{{ data.image }}" width="200"><br>
-            {% endif %}
-            <p>テキスト回答: {{ data.text }}</p>
-            <form method="post" action="/update_score">
-                <input type="hidden" name="name" value="{{ name }}">
-                <input type="number" name="score" value="{{ data.score }}" required>
-                <button type="submit">スコア更新</button>
-            </form>
-        </div>
-    {% endfor %}
+  <h1>提出された回答とスコア管理</h1>
+
+  {% if answers|length == 0 %}
+    <p>まだ提出はありません</p>
+  {% endif %}
+
+  {% for name, image_data, text_answer, score in answers %}
+    <div style="margin-bottom: 20px; border: 1px solid #ccc; padding: 10px;">
+      <p><b>{{ name }}</b></p>
+      {% if image_data %}
+        <img src="{{ image_data }}" alt="手書き回答画像" style="max-width:300px; border:1px solid #ccc;"><br>
+      {% endif %}
+      {% if text_answer %}
+        <p>テキスト回答: {{ text_answer }}</p>
+      {% endif %}
+
+      <form method="POST" action="/score" style="margin-top: 10px;">
+        <input type="hidden" name="name" value="{{ name }}">
+        スコア: <input type="number" name="score" value="{{ score }}" min="0" required>
+        <button type="submit">更新</button>
+      </form>
+    </div>
+  {% endfor %}
+
+  <a href="/reset">リセット（スコア確定）</a>
 </body>
 </html>

@@ -10,41 +10,68 @@ answers = {}
 def home():
     return redirect(url_for('player'))
 
+from flask import Flask, render_template, request, redirect, session, url_for
+import base64
+import os
+
+app = Flask(__name__)
+app.secret_key = 'your_secret_key'
+
+answers = {}
+
+@app.route('/')
+def index():
+    return redirect('/player')
+
 @app.route('/player', methods=['GET', 'POST'])
 def player():
+    error = None
     if request.method == 'POST':
-        name = request.form['name']
-        session['name'] = name
-        return redirect(url_for('quiz'))
-    return render_template('player.html')
+        name = request.form.get('name')
+        if not name:
+            error = "名前を入力してください"
+        else:
+            session['name'] = name
+            if name not in answers:
+                answers[name] = {'image_data': None, 'text_answer': None, 'score': 0}
+            return redirect('/quiz')
+    score = answers.get(session.get('name', ''), {}).get('score', 0)
+    return render_template('player.html', error=error, score=score)
 
 @app.route('/quiz', methods=['GET', 'POST'])
 def quiz():
-    if 'name' not in session:
-        return redirect(url_for('player'))
+    name = session.get('name')
+    if not name:
+        return redirect('/player')
 
-    name = session['name']
-    
     if request.method == 'POST':
         image_data = request.form.get('image_data')
         text_answer = request.form.get('text_answer')
+        answers[name]['image_data'] = image_data
+        answers[name]['text_answer'] = text_answer
 
-        answers[name] = {
-            "image": image_data,
-            "text": text_answer,
-            "score": answers.get(name, {}).get("score", 0)
-        }
-
-    return render_template('quiz.html', name=name)
+    return render_template('quiz.html', name=name, score=answers[name]['score'])
 
 @app.route('/host')
 def host():
-    return render_template('host.html', answers=answers)
+    answer_list = [
+        (name, data['image_data'], data['text_answer'], data['score'])
+        for name, data in answers.items()
+    ]
+    return render_template('host.html', answers=answer_list)
+
+@app.route('/score', methods=['POST'])
+def score():
+    name = request.form.get('name')
+    score = int(request.form.get('score'))
+    if name in answers:
+        answers[name]['score'] = score
+    return redirect('/host')
 
 @app.route('/reset')
 def reset():
-    answers.clear()
-    return redirect(url_for('host'))
+    # スコアを固定するが、状態は維持
+    return redirect('/host')
 
 @app.route('/update_score', methods=['POST'])
 def update_score():
