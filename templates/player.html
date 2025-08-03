@@ -1,16 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 <head>
-  <title>名前入力</title>
+    <title>プレイヤー登録</title>
 </head>
 <body>
-  <h1>名前を入力してください</h1>
-  {% if error %}
-  <p style="color:red;">{{ error }}</p>
-  {% endif %}
-  <form method="POST" action="/player">
-    <input type="text" name="name" placeholder="名前" required>
-    <button type="submit">送信</button>
-  </form>
+    <h1>名前を入力してください</h1>
+    <form method="post">
+        <input type="text" name="name" required>
+        <button type="submit">開始</button>
+    </form>
 </body>
 </html>
